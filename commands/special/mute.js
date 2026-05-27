@@ -17,7 +17,6 @@ export default {
     if (chat.muted.includes(who)) return m.reply('《✧》 Este usuario ya está muteado.')
 
     chat.muted.push(who)
-    // global.db.write() ← QUITADO
 
     await m.react('🔇')
     m.reply(`《✧》 Usuario @${who.split('@')[0]} muteado.\n\n> Todos sus mensajes serán eliminados automáticamente.`, null, { mentions: [who] })
@@ -33,7 +32,14 @@ export default {
       if (global.owner.map(v => v + '@s.whatsapp.net').includes(m.sender)) return
 
       try {
-        await client.sendMessage(m.chat, { delete: m.key })
+        await client.sendMessage(m.chat, {
+          delete: {
+            remoteJid: m.chat,
+            fromMe: false,
+            id: m.key.id,
+            participant: m.key.participant || m.sender
+          }
+        })
         return true
       } catch (e) {
         console.log('Error borrando mensaje muteado:', e)
