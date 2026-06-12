@@ -101,7 +101,7 @@ export default {
           'canonical-url': link,
           'matched-text': link,
           title: botname,
-          description: `${namebot}, mᥲძᥱ ᥕі𝗍һ ᑲᥡ ⁱᵃᵐ|𝔇ĕ𝐬†𝓻⊙γ𒆜`,
+          description: `${namebot}, made with  .🎀   ֹ   ۪ 𝕸𝕚𝕔𝕙𝕚𝕄𝕚́𝗮𝘂𝗢𝗙𝗖.`,
           jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined,
           highQualityThumbnail: imageMessage || undefined
         }))) : undefined,
