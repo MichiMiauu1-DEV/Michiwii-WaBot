@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { getDevice } from '@whiskeysockets/baileys';
+import { getDevice, prepareWAMessageMedia } from '@whiskeysockets/baileys'; // <— Solo se agregó prepareWAMessageMedia aquí
 import fs from 'fs';
 import axios from 'axios';
 import moment from 'moment-timezone';
@@ -81,6 +81,7 @@ export default {
         menu = menu.replace(new RegExp(`\\${key}`, 'g'), value);
       }
       
+      // MODIFICACIÓN DEL BANNER COMPATIBLE CON TU ARCHIVO ORIGINAL:
       await client.sendMessage(m.chat, banner.includes('.mp4') || banner.includes('.webm') ? {
         video: { url: banner },
         gifPlayback: true,
@@ -96,6 +97,14 @@ export default {
         }
       } : {
         text: menu.trim(),
+        linkPreview: link && banner ? (await prepareWAMessageMedia({ image: { url: banner }}, { upload: client.waUploadToServer, mediaTypeOverride: 'thumbnail-link' }).then(({ imageMessage }) => ({
+          'canonical-url': link,
+          'matched-text': link,
+          title: botname,
+          description: `${namebot}, mᥲძᥱ ᥕі𝗍һ ᑲᥡ ⁱᵃᵐ|𝔇ĕ𝐬†𝓻⊙γ𒆜`,
+          jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined,
+          highQualityThumbnail: imageMessage || undefined
+        }))) : undefined,
         contextInfo: {
           mentionedJid: [owner, m.sender].filter(Boolean),
           isForwarded: true,
@@ -103,15 +112,6 @@ export default {
             newsletterJid: canalId,
             serverMessageId: '0',
             newsletterName: canalName
-          },
-          externalAdReply: {
-            title: botname,
-            body: `${namebot}, mᥲძᥱ ᥕі𝗍һ ❤ ᑲᥡ .🎀   ֹ   ۪ 𝕸𝕚𝕔𝕙𝕚𝕄𝕚́𝗮𝘂_𝘂𝟭.⁩ `,
-            showAdAttribution: false,
-            thumbnailUrl: banner,
-            mediaType: 1,
-            previewType: 0,
-            renderLargerThumbnail: true
           }
         }
       }, { quoted: m });
