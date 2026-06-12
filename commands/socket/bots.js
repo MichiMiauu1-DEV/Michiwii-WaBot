@@ -14,7 +14,7 @@ export default {
     const bot = global.db.data.settings[botId]
     const botname = bot.botname
     const namebot = bot.namebot
-    const banner = bot.icon
+    const banner = bot.icon // <— Aquí ya se extrae tu icon tal cual compartiste
     const from = m.key.remoteJid
     const groupMetadata = m.isGroup ? await client.groupMetadata(from).catch(() => {}) : ''
     const groupParticipants = groupMetadata?.participants?.map((p) => p.phoneNumber || p.jid || p.lid || p.id) || []
@@ -68,6 +68,8 @@ export default {
         message += categorizedBots[category].join('\n') + '\n'
       }
     }
-    await client.sendContextInfoIndex(m.chat, message, {}, m, true, mentionedJid)
+    
+    // CAMBIO AQUÍ: Se envía usando el método personalizado que maneja el icon/banner
+    await client.sendContextInfoIndex(m.chat, message, { icon: banner }, m, true, mentionedJid)
   },
 };
