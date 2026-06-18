@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-global.owner = ['50376271661', '51982810730', '5351512906']
+global.owner = ['50376317690', '51982810730', '5351512906']
 global.botNumber = ''
 //Añade el número de telefono donde estara el bot ahi, para recibir code al iniciar, si lo dejas vacio no hay problema, el cambio es que te pedira ingresar el número de telefono en consola manualmente.
 
