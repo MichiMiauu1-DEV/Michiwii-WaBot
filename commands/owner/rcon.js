@@ -8,7 +8,7 @@ const RCON_CONFIG = {
 }
 
 // 📱 SÓLO USTEDES DOS TIENEN EL PODER
-const NUMEROS_AUTORIZADOS = ['50376271661', '51972401983']
+const NUMEROS_AUTORIZADOS = ['50376317690', '51972401983']
 
 export default {
   command: ['rcon', 'mccmd', 'console'],
