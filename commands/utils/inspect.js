@@ -8,7 +8,7 @@ export default {
     const client = sock; // Alias para compatibilidad interna
     const m = msg;
 
-    if (!text) return sock.sendMessage(m.chat, { text: `《✧》 Por favor, ingrese el enlace de grupo/comunidad o canal.` }, { quoted: m });
+    if (!text) return sock.sendMessage(m.chat, { text: `.《✧》 Por favor, ingrese el enlace de grupo/comunidad o canal.` }, { quoted: m });
     
     const channelUrl = text?.match(/(?:https:\/\/)?(?:www\.)?(?:chat\.|wa\.)?whatsapp\.com\/(?:channel\/|joinchat\/)?([0-9A-Za-z]{22,24})/i)?.[1]
     const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
