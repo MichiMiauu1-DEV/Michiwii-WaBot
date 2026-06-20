@@ -5,49 +5,52 @@ export default {
   command: ["inspect", "inspeccionar"],
   category: "tools",
   run: async (client, m, args, usedPrefix, command, text) => {
-    if (!text) return client.sendMessage(m.chat, { text: `《✧》 Por favor, ingrese el enlace de grupo o canal.` }, { quoted: m });
     
-    const channelUrl = text?.match(/(?:https:\/\/)?(?:www\.)?(?:chat\.|wa\.)?whatsapp\.com\/(?:channel\/|joinchat\/)?([0-9A-Za-z]{22,24})/i)?.[1]
-    const botId = client.user.id.split(':')[0] + '@s.whatsapp.net';
-    const settings = global.db.data.settings[botId] || {};
-    let thumb = settings.icon || null;
-    let pp;
+    // 1. Detección de tipos de enlace
+    const isChannel = text?.includes("whatsapp.com/channel/");
+    const isGroupInvite = text?.includes("whatsapp.com/invite/") || text?.includes("chat.whatsapp.com/");
 
-    const MetadataGroupInfo = async (res) => {
-      pp = await client.profilePictureUrl(res.id, 'image').catch(() => null);
-      let caption = `🆔 *ID:* ${res.id}\n🏷️ *Nombre:* ${res.subject}\n👑 *Dueño:* ${res.owner ? "@" + res.owner.split("@")[0] : "N/A"}\n🔰 *Miembros:* ${res.size}\n📢 *Anuncios:* ${res.announce ? "✅" : "❌"}`;
-      return caption;
-    };
-
-    const inviteGroupInfo = async (groupData) => {
-      pp = await client.profilePictureUrl(groupData.id, 'image').catch(() => null);
-      return `🆔 *ID:* ${groupData.id}\n🏷️ *Nombre:* ${groupData.subject}\n🔰 *Miembros:* ${groupData.size}\n📢 *Anuncios:* ${groupData.announce ? "✅" : "❌"}`;
-    };
-
-    let info;
-    try {
-      const res = text ? null : await client.groupMetadata(m.chat);
-      info = res ? await MetadataGroupInfo(res) : null;
-      if (!info && text.includes("whatsapp.com/")) {
-        const inviteUrl = text.match(/([0-9A-Za-z]{22,24})/i)?.[1];
-        const inviteInfo = await client.groupGetInviteInfo(inviteUrl);
-        info = await inviteGroupInfo(inviteInfo);
+    // 2. Inspeccionar Canal
+    if (isChannel) {
+      const channelCode = text.match(/([0-9A-Za-z]{22,24})/i)?.[1];
+      if (!channelCode) return m.reply("《✧》 Enlace de canal no válido.");
+      
+      try {
+        const newsletterInfo = await client.newsletterMetadata("invite", channelCode);
+        let caption = "*Inspector de Canales*\n\n" + processObject(newsletterInfo);
+        const thumb = newsletterInfo.preview ? getUrlFromDirectPath(newsletterInfo.preview) : null;
+        await client.sendMessage(m.chat, { text: caption, contextInfo: { externalAdReply: { title: "❀ Canales", body: "✧ Inspectador", thumbnailUrl: thumb, mediaType: 1 }}}, { quoted: m });
+      } catch (e) {
+        return m.reply("《✧》 No pude obtener información de este canal: " + e.message);
       }
-    } catch (e) {
-      return client.sendMessage(m.chat, { text: '《✧》 No se pudo obtener información.' }, { quoted: m });
+      return;
     }
 
-    if (info) {
-      await client.sendMessage(m.chat, { text: info, contextInfo: { externalAdReply: { title: "❀ Inspector", body: "✧ ¡Super Inspectador!", thumbnailUrl: pp || thumb, mediaType: 1 }}}, { quoted: m });
-    } else if (channelUrl) {
-      const newsletterInfo = await client.newsletterMetadata("invite", channelUrl).catch(() => null);
-      if (!newsletterInfo) return client.sendMessage(m.chat, { text: "《✧》 Canal no encontrado." }, { quoted: m });
-      let caption = "*Inspector de Canales*\n\n" + processObject(newsletterInfo);
-      await client.sendMessage(m.chat, { text: caption, contextInfo: { externalAdReply: { title: "❀ Canales", body: "✧ Inspectador", thumbnailUrl: newsletterInfo.preview ? getUrlFromDirectPath(newsletterInfo.preview) : thumb, mediaType: 1 }}}, { quoted: m });
+    // 3. Inspeccionar Grupo (por enlace o si está dentro)
+    try {
+      let groupData;
+      if (isGroupInvite) {
+        const code = text.match(/([0-9A-Za-z]{22,24})/i)?.[1];
+        groupData = await client.groupGetInviteInfo(code);
+      } else {
+        groupData = await client.groupMetadata(m.chat);
+      }
+
+      const pp = await client.profilePictureUrl(groupData.id, 'image').catch(() => null);
+      let info = `🆔 *ID:* ${groupData.id}\n` +
+                 `🏷️ *Nombre:* ${groupData.subject || "N/A"}\n` +
+                 `👑 *Dueño:* ${groupData.owner ? "@" + groupData.owner.split("@")[0] : "N/A"}\n` +
+                 `🔰 *Miembros:* ${groupData.size || "N/A"}\n` +
+                 `📢 *Anuncios:* ${groupData.announce ? "✅" : "❌"}`;
+
+      await client.sendMessage(m.chat, { text: info, contextInfo: { externalAdReply: { title: "❀ Inspector de Grupos", body: "✧ ¡Super Inspectador!", thumbnailUrl: pp, mediaType: 1 }}}, { quoted: m });
+    } catch (e) {
+      m.reply("《✧》 No se pudo obtener la información. El grupo podría ser privado o el enlace no es válido.\nError: " + e.message);
     }
   }
 }
 
+// Funciones auxiliares
 function newsletterKey(key) {
   return _.startCase(key.replace(/_/g, " ")).replace("Id", "🆔 ID").replace("Name", "🏷️ Nombre");
 }
