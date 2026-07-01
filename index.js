@@ -1,4 +1,5 @@
 import "./settings.js"
+import { iniciarPuenteMinecraft } from "./puente.js"
 import main from './main.js'
 import events from './commands/events.js'
 import { Browsers, makeWASocket, makeCacheableSignalKeyStore, useMultiFileAuthState, fetchLatestBaileysVersion, jidDecode, DisconnectReason, jidNormalizedUser, } from "@whiskeysockets/baileys";
@@ -202,6 +203,9 @@ async function startBot() {
          const userJid = jidNormalizedUser(client.user.id)
          const userName = client.user.name || "Desconocido"
          console.log(chalk.green.bold(`[ ✿ ]  Conectado a: ${userName}`))
+         
+         // 🔥 Activación automática del puente de Minecraft
+         iniciarPuenteMinecraft(client)
     }
     if (isNewLogin) {
       log.info("Nuevo dispositivo detectado")
