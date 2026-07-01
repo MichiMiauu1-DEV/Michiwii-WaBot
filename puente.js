@@ -1,21 +1,110 @@
 import { Client, GatewayIntentBits, Partials } from 'discord.js'
-
-// 🕵️‍♂️ TRUCO ANTI-RUSTREO: El token está picado en 4 pedazos para engañar a Discord
-const p1 = "MTUwOTY1ODM4MTU1NDU0ODc3Ng."
-const p2 = "G36S9u"
-const p3 = ".51fmEY8KdF2vg_g4EaGDs"
-const p4 = "Bd3cQk-5pv44K9b40"
+import { Rcon } from 'rcon-client'
 
 const CONFIG = {
-  // Aquí se fusionan los 4 pedazos automáticamente al encender el bot
-  discordToken: `${p1}${p2}${p3}${p4}`, 
-  channelId: '1411167800646565969', // Tu canal #💻│consola
-  whatsappGroupId: 'TU_ID_DE_GRUPO_AQUÍ@g.us' // ⚠️ NO TE OLVIDES DE PONER AQUÍ EL ID DE TU GRUPO DE WA
+  discordToken: 'TOKENXD', 
+  channelId: '1411167709747740783',
+  
+  // Datos de tu Minecraft RCON
+  host: '144.31.46.14',
+  port: 13576,
+  password: 'TeAmoRBC121UwU',
+
+  // ID de tu grupo de WhatsApp
+  whatsappGroupId: '120363410140287111@g.us' 
 }
 
 let ultimaConsolaTxt = ""
+let rconInstance = null
 
-export function iniciarPuenteMinecraft(sock) {
+// 🛠️ TRUCO EXTRACTOR: Convierte las tarjetas de Logros, Conexiones y Muertes de Discord en texto plano
+function extraerTextoDeEmbeds(message) {
+  if (!message.embeds || message.embeds.length === 0) return '';
+  let lineas = [];
+  message.embeds.forEach(embed => {
+    if (embed.author && embed.author.name) lineas.push(embed.author.name);
+    if (embed.title && !lineas.includes(embed.title)) lineas.push(embed.title);
+    if (embed.description && !lineas.includes(embed.description)) lineas.push(embed.description);
+    if (embed.fields && embed.fields.length > 0) {
+      embed.fields.forEach(f => lineas.push(`${f.name}: ${f.value}`));
+    }
+  });
+  return lineas.join(' ').trim();
+}
+
+export async function iniciarPuenteMinecraft(sock) {
+  
+  // 1️⃣ CONECTAR RCON (WhatsApp -> Minecraft)
+  try {
+    rconInstance = await Rcon.connect({
+      host: CONFIG.host,
+      port: Number(CONFIG.port),
+      password: CONFIG.password
+    })
+    console.log('✅ [PUENTE-MC] Conexión RCON lista para recibir chats de WhatsApp.')
+  } catch (err) {
+    console.error('❌ [PUENTE-MC] No se pudo conectar al RCON de Minecraft de inicio:', err.message)
+  }
+
+  // 2️⃣ ESCUCHAR WHATSAPP -> ENVIAR A MINECRAFT (Comandos .mc y ™mc)
+  sock.ev.on('messages.upsert', async (chatUpdate) => {
+    if (chatUpdate.type !== 'notify') return
+    const msg = chatUpdate.messages[0]
+    if (!msg.message || msg.key.fromMe) return
+
+    const chatId = msg.key.remoteJid
+    if (chatId !== CONFIG.whatsappGroupId) return
+
+    const textoMensaje = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim()
+
+    // Soporta comandos con prefijo .mc o ™mc dinámicamente
+    const matchComando = textoMensaje.match(/^([.™])mc\s+(.+)$/i)
+
+    if (matchComando) {
+      const jidRemitente = msg.key.participant || msg.key.remoteJid || ""
+      const numeroLimpio = jidRemitente.split('@')[0]
+
+      let nombreRemitente = ""
+
+      // Candado estricto por número telefónico
+      if (numeroLimpio.startsWith('51')) {
+        nombreRemitente = "RBC121"
+      } else if (numeroLimpio.startsWith('503')) {
+        nombreRemitente = "MichiMiauOFC"
+      } else {
+        return // Ignorar por completo si es otra persona en el grupo
+      }
+
+      const contenidoLimpio = matchComando[2].replace(/"/g, '\\"')
+      const tellrawCmd = `tellraw @a ["",{"text":"WhatsApp","color":"green"}," ",{"text":"${nombreRemitente} » ${contenidoLimpio}","color":"white"}]`
+
+      // Prueba de errores con reacciones visuales
+      try {
+        if (!rconInstance) {
+          rconInstance = await Rcon.connect({ host: CONFIG.host, port: Number(CONFIG.port), password: CONFIG.password })
+        }
+
+        await rconInstance.send(tellrawCmd)
+        console.log(`💬 [RCON] ${nombreRemitente} envió con éxito: ${contenidoLimpio}`)
+
+        // Reacción de éxito (Check verde)
+        await sock.sendMessage(chatId, { 
+          react: { text: '✅', key: msg.key } 
+        }).catch(() => {})
+
+      } catch (error) {
+        console.error("❌ Error crítico en el puente RCON:", error.message)
+        rconInstance = null 
+
+        // Reacción de fallo (X roja)
+        await sock.sendMessage(chatId, { 
+          react: { text: '❌', key: msg.key } 
+        }).catch(() => {})
+      }
+    }
+  })
+
+  // 3️⃣ ESCUCHAR DISCORD (MINECRAFT) -> ENVIAR A WHATSAPP (Soporta Logs y Embeds)
   const discordBot = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -26,7 +115,7 @@ export function iniciarPuenteMinecraft(sock) {
   })
 
   discordBot.on('clientReady', () => {
-    console.log(`🎮 [PUENTE-MC] Conectado a Discord escuchando Minecraft con éxito.`);
+    console.log(` [PUENTE-MC] Conectado a Discord escuchando juego con éxito.`);
   })
 
   function procesarTextoConsola(nuevoContenido) {
@@ -47,7 +136,7 @@ export function iniciarPuenteMinecraft(sock) {
         if (line.trim() && sock) {
           await sock.sendMessage(CONFIG.whatsappGroupId, { 
             text: `🎮 *[MINECRAFT]* ${line.replace(/\*\*/g, '')}` 
-          }).catch(e => console.log("Error enviando a WA:", e.message))
+          }).catch(e => {})
         }
       })
     }
@@ -56,13 +145,26 @@ export function iniciarPuenteMinecraft(sock) {
   discordBot.on('messageUpdate', async (oldMessage, newMessage) => {
     if (newMessage.partial) { try { await newMessage.fetch() } catch (e) { return } }
     if (newMessage.channelId !== CONFIG.channelId) return
-    procesarTextoConsola(newMessage.content)
+    
+    let contenido = newMessage.content
+    if (newMessage.embeds.length > 0) {
+      contenido = extraerTextoDeEmbeds(newMessage)
+    }
+
+    if (contenido && contenido.includes('```')) {
+      procesarTextoConsola(contenido)
+    } else if (contenido && sock) {
+      await sock.sendMessage(CONFIG.whatsappGroupId, { text: `🎮 *[MINECRAFT]* ${contenido.replace(/\*\*/g, '')}` }).catch(e => {})
+    }
   })
 
   discordBot.on('messageCreate', async (message) => {
     if (message.channelId !== CONFIG.channelId || message.author.id === discordBot.user.id) return
+    
     let contenido = message.content
-    if (message.embeds.length > 0) contenido = message.embeds[0].description || message.embeds[0].title || ''
+    if (message.embeds.length > 0) {
+      contenido = extraerTextoDeEmbeds(message)
+    }
 
     if (contenido && !contenido.includes('```') && sock) {
       await sock.sendMessage(CONFIG.whatsappGroupId, { text: `🎮 *[MINECRAFT]* ${contenido.replace(/\*\*/g, '')}` }).catch(e => {})
